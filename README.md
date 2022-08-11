@@ -18,4 +18,5 @@ In root folder, run:
 docker-compose build
 docker-compose up
 ```
+// "start": "react-scripts start",
 

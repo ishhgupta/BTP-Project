@@ -1,4 +1,5 @@
 from cgi import test
+from urllib import response
 from flask import Flask, request, jsonify
 from app import app
 from flask_cors import CORS
@@ -15,6 +16,10 @@ from bson import json_util
 import os
 import random
 import numpy as np
+import json
+# import pdfkit
+
+
 
 CORS(app, supports_credentials=True, origins='*')
 # while running docker compose
@@ -270,7 +275,7 @@ def index():
 #         print(data)
 #         return jsonify({"test_data": data}), SIGNALS['OK']
 #     else:
-#         doctor_email = request.args.get('doctor')
+#         doctor_email = request.args.get('patient')
 #         patient_email = request.args.get('patient')
 #         if doctor_email:
 #             tests = db.tests.find({"doctor": doctor_email})
@@ -422,69 +427,52 @@ def newTest():
             return jsonify({"message": "Error in processing test"}), SIGNALS['INTERNAL_SERVER_ERROR']
 
 
-def create_pdf(test):
-    from fpdf import FPDF
-    # create pdf
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Test Case Number: " +
-             test['case_number'], ln=1, align="C")
-    pdf.cell(200, 10, txt="Test Case Name: " +
-             test['case_name'], ln=1, align="C")
-    pdf.cell(200, 10, txt="Patient: " + test['email'], ln=1, align="C")
-    # TODO age, gender, contact number, martial status, occupation, medical history, duration
-    pdf.cell(200, 10, txt="Doctor: " + test['doctor'], ln=1, align="C")
-    pdf.cell(200, 10, txt="Date: " + test['date'], ln=1, align="C")
-    pdf.cell(200, 10, txt="Total Score: " +
-             str(test['total_score']), ln=1, align="C")
-    pdf.cell(200, 10, txt="", ln=1, align="C")
-    pdf.cell(200, 10, txt="Questions:", ln=1, align="C")
-    for question in test['questions']:
-        pdf.cell(200, 10, txt=question['question'], ln=1, align="C")
-        pdf.cell(200, 10, txt="Score: " +
-                 str(question['score']), ln=1, align="C")
-        pdf.cell(200, 10, txt="", ln=1, align="C")
-    pdf.cell(200, 10, txt="Passages:", ln=1, align="C")
-    for passage in test['passages']:
-        pdf.cell(200, 10, txt=passage['passage'], ln=1, align="C")
-        pdf.cell(200, 10, txt="Score: " +
-                 str(passage['score']), ln=1, align="C")
-        pdf.cell(200, 10, txt="", ln=1, align="C")
-    pdf.cell(200, 10, txt="", ln=1, align="C")
+# def create_pdf(test):
+#     from fpdf import FPDF
+#     # create pdf
+#     pdf = FPDF()
+#     pdf.add_page()
+#     pdf.set_font("Arial", size=12)
+#     pdf.cell(200, 10, txt="Test Case Number: " +
+#              test['case_number'], ln=1, align="C")
+#     pdf.cell(200, 10, txt="Test Case Name: " +
+#              test['case_name'], ln=1, align="C")
+#     pdf.cell(200, 10, txt="Patient: " + test['email'], ln=1, align="C")
+#     # TODO age, gender, contact number, martial status, occupation, medical history, duration
+#     pdf.cell(200, 10, txt="Doctor: " + test['doctor'], ln=1, align="C")
+#     pdf.cell(200, 10, txt="Date: " + test['date'], ln=1, align="C")
+#     pdf.cell(200, 10, txt="Total Score: " +
+#              str(test['total_score']), ln=1, align="C")
+#     pdf.cell(200, 10, txt="", ln=1, align="C")
+#     pdf.cell(200, 10, txt="Questions:", ln=1, align="C")
+#     for question in test['questions']:
+#         pdf.cell(200, 10, txt=question['question'], ln=1, align="C")
+#         pdf.cell(200, 10, txt="Score: " +
+#                  str(question['score']), ln=1, align="C")
+#         pdf.cell(200, 10, txt="", ln=1, align="C")
+#     pdf.cell(200, 10, txt="Passages:", ln=1, align="C")
+#     for passage in test['passages']:
+#         pdf.cell(200, 10, txt=passage['passage'], ln=1, align="C")
+#         pdf.cell(200, 10, txt="Score: " +
+#                  str(passage['score']), ln=1, align="C")
+#         pdf.cell(200, 10, txt="", ln=1, align="C")
+#     pdf.cell(200, 10, txt="", ln=1, align="C")
 
-    return pdf
+#     return pdf
 
 
-@app.route('/tests', methods=['GET'])
-@jwt_required()
-def getTests():
-    user = get_current_user()
-    role = user['usertype']
 
+@app.route('/allTests', methods=['GET'])
+# @jwt_required()
+def getAllTests():
     try:
         tests = None
-
-        if role == 2:  # doctor
-            tests = db.tests.find({'doctor': user['email']})
-            tests = [{"case_name": test['case_name'], "case_number": test['case_number'],
-                      "date": test['date'],
-                      "email": test['email'], "id": str(test['_id'])} for test in tests]
-
-            # test = db.tests.find(
-            #     {"doctor": user['email']}).sort([("date", -1)])
-            # print("doctor", test)
-            # return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
-        elif role == 3:  # patient
-            tests = db.tests.find({"email": user['email']}).sort('date', -1)
-            # test = db.tests.find(
-            #     {"patient": user['email']}).sort([("date", -1)])
-            # TODO: filter details for patient
-            # TODO: generate pdf for patient based on request not here
-            # print("patient", test)
-            # return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
-        else:
-            tests = db.tests.find().sort('date', -1)
+        tests = db.tests.find()
+        print(tests)
+        tests = [{"case_name": test['case_name'], "case_number": test['case_number'],
+                    "date": test['date'],
+                    "email": test['email'], "id": str(test['_id'])} for test in tests]
+        print(tests)
         return jsonify({"tests": tests}), SIGNALS['OK']
     except InvalidId:
         return jsonify({"message": "Invalid test id"}), SIGNALS['UNAUTHORIZED']
@@ -493,20 +481,210 @@ def getTests():
         return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
 
 
-@app.route('/test/<id>', methods=['GET'])
+# @app.route('/allTests', methods=['GET'])
+# # @jwt_required()
+# def getAllTests():
+#     try:
+#         tests = None
+#         tests = db.tests.find()
+#         tests = [{"case_name": test['case_name'], "case_number": test['case_number'],
+#                       "date": test['date'],
+#                       "email": test['email'], "id": str(test['_id'])} for test in tests]
+#         print("abc")
+#         # tests = db.tests.find().sort('date', -1)
+#         print(tests)
+#         return jsonify({"tests": tests}), SIGNALS['OK']
+#     except InvalidId:
+#         return jsonify({"message": "Invalid test id"}), SIGNALS['UNAUTHORIZED']
+#     except Exception as e:
+#         print(type(e))
+#         return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+
+
+
+@app.route('/doctors', methods=['GET'])
 @jwt_required()
-def getTest(id):
+def getdoctors():
+    # print("oyoyoyo")
     user = get_current_user()
     role = user['usertype']
-
-    print(db.users.find_one({"email": user}))
+    print(user)
     try:
-        if role in [0, 1, 2]:
-            test = db.tests.find_one({"_id": ObjectId(id)})
+        doctors = None
+        doctors = db.users.find(
+            {"usertype": 2}).sort([("date", -1)])
+        doctors  = [{"username": doctor['username'], 
+                      "email": doctor['email'] ,
+                      "id": str(doctor['_id'])} for doctor in doctors]
+        print(doctors)
+        # TODO: filter details for patient
+        # TODO: generate pdf for patient based on request not here
+        # print("patient", test)
+        # return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+        response =jsonify({"doctors": doctors})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return jsonify({"doctors": doctors}), SIGNALS['OK']
+    except InvalidId:
+        return jsonify({"message": "Invalid test id"}), SIGNALS['UNAUTHORIZED']
+    except Exception as e:
+        print(type(e))
+        return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+
+
+@app.route('/doctors/edit', methods=['POST'])
+@jwt_required()
+def getdoctorsedit():
+    # print("oyoyoyo")
+    inp= request.get_json()
+    curr = inp["param"]
+    # print(curr)
+
+    tochange = inp["param2"]
+    try:
+        doctors = None
+        doctors = (db.users.find_one({"username": curr}))
+        print(type(doctors['username']))
+        doctors = db.users.find_one_and_update(
+            {'username': curr},
+            {
+            "$set": {
+                'username':tochange
+            }
+
+            }
+        )
+        print("yo")
+        print(doctors)
+        # TODO: filter details for patient
+        # TODO: generate pdf for patient based on request not here
+        # print("patient", test)
+        # return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+        # response =jsonify({"doctors": doctors}), SIGNALS['OK']
+        # response.headers.add('Access-Control-Allow-Origin', '*')
+        return jsonify({"doctors": "good"}), SIGNALS['OK']
+    except InvalidId:
+        return jsonify({"message": "Invalid test id"}), SIGNALS['UNAUTHORIZED']
+    except Exception as e:
+        print(type(e))
+        return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+@app.route('/doctors/edit2', methods=['POST'])
+@jwt_required()
+def getdoctorsedit2():
+    # print("oyoyoyo")
+    inp= request.get_json()
+    curr = inp["param"]
+    # print(curr)
+
+    tochange = inp["param2"]
+    # print(tochange)
+    # user = get_current_user()
+    # role = user['usertype']
+    # print(user)
+    try:
+        doctors = None
+        doctors = (db.users.find_one({"email": curr}))
+        print(type(doctors['email']))
+        doctors = db.users.find_one_and_update(
+            {'email': curr},
+            {
+            "$set": {
+                'email':tochange
+            }
+
+            }
+        )
+        print("yo")
+        print(doctors)
+        # TODO: filter details for patient
+        # TODO: generate pdf for patient based on request not here
+        # print("patient", test)
+        # return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+        # response =jsonify({"doctors": doctors}), SIGNALS['OK']
+        # response.headers.add('Access-Control-Allow-Origin', '*')
+        return jsonify({"doctors": "good"}), SIGNALS['OK']
+    except InvalidId:
+        return jsonify({"message": "Invalid test id"}), SIGNALS['UNAUTHORIZED']
+    except Exception as e:
+        print(type(e))
+        return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+
+@app.route('/patients', methods=['GET'])
+@jwt_required()
+def getpatients():
+    user = get_current_user()
+    role = user['usertype']
+    print(user)
+    try:
+        patients = None
+        patients = db.users.find(
+            {"usertype": 3}).sort([("date", -1)])
+        patients  = [{"username": patient['username'], 
+                      "email": patient['email'],
+                      "id": str(patient['_id'])} for patient in patients]
+        print(patients)
+        # TODO: filter details for patient
+        # TODO: generate pdf for patient based on request not here
+        # print("patient", test)
+        # return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+        response =jsonify({"patients": patients})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return jsonify({"patients": patients}), SIGNALS['OK']
+    except InvalidId:
+        return jsonify({"message": "Invalid test id"}), SIGNALS['UNAUTHORIZED']
+    except Exception as e:
+        print(type(e))
+        return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+
+
+@app.route('/test/<id>', methods=['GET'])
+# @jwt_required()
+def getTest(id):
+    # user = get_current_user()
+    print(id)
+    # role = user['usertype']
+    # print(db.users.find_one({"email": user}))
+    try:
+        # if role in [0, 1, 2,3]:
+        test = db.tests.find_one({"_id": ObjectId(id)})
             # create pdf
             # pdf = create_pdf(test)
             # TODO: verify pdf, return pdf
-            return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+        return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+        # else:
+        #     return jsonify({"message": "You are not authorized to view this test"}), SIGNALS['UNAUTHORIZED']
+    except InvalidId:
+        return jsonify({"message": "Invalid test id"}), SIGNALS['NOT_FOUND']
+    except Exception as e:
+        print(type(e))
+        return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+@app.route('/user/<id>', methods=['GET'])
+@jwt_required()
+def getuser(id):
+    print(id)
+    # response = jsonify({"message": "Invalid test id"})
+    # response.headers.add('Access-Control-Allow-Origin', '*')
+    # return response,SIGNALS['CONFLICT']
+    user = get_current_user()
+    role = user['usertype']
+    print(user)
+    print(db.users.find_one({"email": user['email']}))
+    try:
+        test = None
+        USER = None
+        if role == 1:
+            USER = db.users.find_one({"_id": ObjectId(id)})
+            print(USER)
+            if USER['usertype'] == 2:
+                tests = db.tests.find({'doctor': USER['email']})
+                tests = [{"case_name": test['case_name'], "case_number": test['case_number'],
+                        "date": test['date'],
+                        "email": test['email'], "id": str(test['_id'])} for test in tests]
+            elif USER['usertype'] == 3:
+                tests = db.tests.find({'email': USER['email']})
+                tests = [{"case_name": test['case_name'], "case_number": test['case_number'],
+                        "date": test['date'],
+                        "email": test['email'], "id": str(test['_id'])} for test in tests]
+            return jsonify({"tests": tests}), SIGNALS['OK']
         else:
             return jsonify({"message": "You are not authorized to view this test"}), SIGNALS['UNAUTHORIZED']
     except InvalidId:
@@ -514,3 +692,60 @@ def getTest(id):
     except Exception as e:
         print(type(e))
         return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+@app.route('/username/<id>', methods=['GET'])
+@jwt_required()
+def getusername(id):
+    print(id)
+    # response = jsonify({"message": "Invalid test id"})
+    # response.headers.add('Access-Control-Allow-Origin', '*')
+    # return response,SIGNALS['CONFLICT']
+    user = get_current_user()
+    role = user['usertype']
+    print(user)
+    print(db.users.find_one({"email": user['email']}))
+    try:
+        test = None
+        USER = None
+        if role == 1:
+            USER = db.users.find_one({"_id": ObjectId(id)})
+            print(USER)
+            return jsonify({"username": USER["username"]}), SIGNALS['OK']
+        else:
+            return jsonify({"message": "You are not authorized to view this test"}), SIGNALS['UNAUTHORIZED']
+    except InvalidId:
+        return jsonify({"message": "Invalid test id"}), SIGNALS['NOT_FOUND']
+    except Exception as e:
+        print(type(e))
+        return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']
+ 
+
+#  {'method': 'POST', 'scheme': 'http', 'server': ('127.0.0.1', 5000), 'root_path': '', 'path': '/doctors/edit', 'query_string': b'', 'headers': EnvironHeaders([('Host', 'localhost:5000'), ('Connection', 'keep-alive'), ('Content-Length', '43'), ('Sec-Ch-Ua', '"Google Chrome";v="95", "Chromium";v="95", ";Not A Brand";v="99"'), ('Sec-Ch-Ua-Mobile', '?0'), ('Authorization', 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY1MTQ0MzI1MCwianRpIjoiOTQwMjRmYTktOWU1Zi00OTFhLThkZGItYTA4YzRlZWFlNzk4IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImRpbmVzaC5nYXJnQHN0dWRlbnRzLmlpaXQuYWMuaW4iLCJuYmYiOjE2NTE0NDMyNTAsImV4cCI6MTY1MTQ0Njg1MH0.xkUARl6DBLcg-Ml7b6Pp1Epy9hLfWLdV7VQbvj_e3aE'), ('Accept', 'application/json, text/plain, */*'), ('Content-Type', 'application/json'), ('Access-Control-Allow-Origin', '*'), ('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'), ('Sec-Ch-Ua-Platform', '"Linux"'), ('Origin', 'http://localhost:3000'), ('Sec-Fetch-Site', 'same-site'), ('Sec-Fetch-Mode', 'cors'), ('Sec-Fetch-Dest', 'empty'), ('Referer', 'http://localhost:3000/'), ('Accept-Encoding', 'gzip, deflate, br'), ('Accept-Language', 'en-US,en;q=0.9')]), 'remote_addr': '127.0.0.1', 'environ': {'wsgi.version': (1, 0), 'wsgi.url_scheme': 'http', 'wsgi.input': <_io.BufferedReader name=7>, 'wsgi.errors': <_io.TextIOWrapper name='<stderr>' mode='w' encoding='utf-8'>, 'wsgi.multithread': True, 'wsgi.multiprocess': False, 'wsgi.run_once': False, 'werkzeug.server.shutdown': <function WSGIRequestHandler.make_environ.<locals>.shutdown_server at 0x7fef12b70160>, 'werkzeug.socket': <socket.socket fd=7, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('127.0.0.1', 5000), raddr=('127.0.0.1', 39760)>, 'SERVER_SOFTWARE': 'Werkzeug/2.0.3', 'REQUEST_METHOD': 'POST', 'SCRIPT_NAME': '', 'PATH_INFO': '/doctors/edit', 'QUERY_STRING': '', 'REQUEST_URI': '/doctors/edit', 'RAW_URI': '/doctors/edit', 'REMOTE_ADDR': '127.0.0.1', 'REMOTE_PORT': 39760, 'SERVER_NAME': '127.0.0.1', 'SERVER_PORT': '5000', 'SERVER_PROTOCOL': 'HTTP/1.1', 'HTTP_HOST': 'localhost:5000', 'HTTP_CONNECTION': 'keep-alive', 'CONTENT_LENGTH': '43', 'HTTP_SEC_CH_UA': '"Google Chrome";v="95", "Chromium";v="95", ";Not A Brand";v="99"', 'HTTP_SEC_CH_UA_MOBILE': '?0', 'HTTP_AUTHORIZATION': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY1MTQ0MzI1MCwianRpIjoiOTQwMjRmYTktOWU1Zi00OTFhLThkZGItYTA4YzRlZWFlNzk4IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImRpbmVzaC5nYXJnQHN0dWRlbnRzLmlpaXQuYWMuaW4iLCJuYmYiOjE2NTE0NDMyNTAsImV4cCI6MTY1MTQ0Njg1MH0.xkUARl6DBLcg-Ml7b6Pp1Epy9hLfWLdV7VQbvj_e3aE', 'HTTP_ACCEPT': 'application/json, text/plain, */*', 'CONTENT_TYPE': 'application/json', 'HTTP_ACCESS_CONTROL_ALLOW_ORIGIN': '*', 'HTTP_USER_AGENT': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36', 'HTTP_SEC_CH_UA_PLATFORM': '"Linux"', 'HTTP_ORIGIN': 'http://localhost:3000', 'HTTP_SEC_FETCH_SITE': 'same-site', 'HTTP_SEC_FETCH_MODE': 'cors', 'HTTP_SEC_FETCH_DEST': 'empty', 'HTTP_REFERER': 'http://localhost:3000/', 'HTTP_ACCEPT_ENCODING': 'gzip, deflate, br', 'HTTP_ACCEPT_LANGUAGE': 'en-US,en;q=0.9', 'werkzeug.request': <Request 'http://localhost:5000/doctors/edit' [POST]>}, 'shallow': False, 'url_rule': <Rule '/doctors/edit' (POST, OPTIONS) -> getdoctorsedit>, 'view_args': {}, 'host': 'localhost:5000', 'url': 'http://localhost:5000/doctors/edit'}
+
+
+# @app.route('/downloadpdf/<id>', methods=['GET'])
+# # @jwt_required()
+# def downloadpdf(id):
+    
+#     pdfkit.from_url("https://localhost:3000/test/" + str(id), "out.pdf")
+#     # os.system("wkhtmtopdf https://localhost:3000/test/" + str(id) + " output.pdf")
+    
+#     return jsonify({"test": json_util.dumps(id)}), SIGNALS['OK']
+    
+#     # user = get_current_user()
+#     # print(id)
+#     # # role = user['usertype']
+#     # # print(db.users.find_one({"email": user}))
+#     # try:
+#     #     # if role in [0, 1, 2,3]:
+#     #     test = db.tests.find_one({"_id": ObjectId(id)})
+#     #         # create pdf
+#     #         # pdf = create_pdf(test)
+#     #         # TODO: verify pdf, return pdf
+#     #     return jsonify({"test": json_util.dumps(test)}), SIGNALS['OK']
+#     #     # else:
+#     #     #     return jsonify({"message": "You are not authorized to view this test"}), SIGNALS['UNAUTHORIZED']
+#     # except InvalidId:
+#     #     return jsonify({"message": "Invalid test id"}), SIGNALS['NOT_FOUND']
+#     # except Exception as e:
+#     #     print(type(e))
+#     #     return jsonify({"message": "Error in processing test"}), SIGNALS['CONFLICT']

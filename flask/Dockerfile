@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.6
 
 LABEL MAINTAINER="Harsha Pathuri <harsha.pathuri@students.iiit.ac.in"
 

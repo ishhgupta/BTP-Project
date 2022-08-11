@@ -27,6 +27,8 @@ export function Home() {
     const user = JSON.parse(localStorage.getItem("user"));
     if (user.usertype !== 2) window.location.href = "/";
     setUser(user);
+    console.log("user")
+    console.log(user);
   }, []);
 
   return (
@@ -69,8 +71,7 @@ export function Home() {
             New Test
           </Button>
         </Box>
-      </Container>
-      <Box
+        <Box
         sx={{
           marginTop: 8,
           display: "flex",
@@ -79,6 +80,8 @@ export function Home() {
       >
         <TestList />
       </Box>
+      </Container>
+      
     </ThemeProvider>
   );
 }
@@ -116,6 +119,7 @@ export function TestList() {
 }
 
 const TestCard = ({ test }) => {
+  console.log(test);
   return (
     <Card
       sx={{
